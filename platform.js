@@ -298,7 +298,6 @@ class AugustPlatform {
       requestingCode = true;
     }
 
-    self.platformLog(authorizeRequest);
     // Log in
     self.augustApi.authorize(authorizeRequest).then(
       function () {
