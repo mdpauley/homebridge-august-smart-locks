@@ -1,15 +1,13 @@
-exports.AugustPlatform = void 0;
+exports.AugustDummyGaragePlatform = void 0;
 
-const fs = require("fs");
+const ModuleName = "homebridge-august-smart-locks-dummy-garage";
+const PlatformName = "AugustDummyGarage";
 
-const ModuleName = "homebridge-august-smart-locks";
-const PlatformName = "AugustLocks";
-
-class AugustPlatform {
+class AugustDummyGaragePlatform {
   constructor(log, config, api) {
     this.log = log;
     this.platformLog = function (msg) {
-      log("[August]", msg);
+      log("[AugustDummyGarage]", msg);
     };
     this.Accessory = api.platformAccessory;
     this.Service = api.hap.Service;
@@ -32,15 +30,15 @@ class AugustPlatform {
     this.validData = false;
     this.codeRequested = false;
     this.hideLocks = this.config.hideLocks ? this.config.hideLocks.split(",") : [];
-    
+
     this.cacheDirectory = api.user.persistPath();
-    this.storage = require('node-persist');
+    this.storage = require("node-persist");
     this.storage.initSync({
-        dir: this.cacheDirectory,
-        forgiveParseErrors: true,
+      dir: this.cacheDirectory,
+      forgiveParseErrors: true,
     });
-    
-    this.authed = this.storage.getItemSync('authed') || false;
+
+    this.authed = this.storage.getItemSync("authed") || false;
 
     this.augustApiConfig = {
       apiKey: config.securityToken || "7cab4bbd-2693-4fc1-b99b-dec0fb20f9d4", //pulled from android apk july 2020,
@@ -51,7 +49,7 @@ class AugustPlatform {
     };
 
     this.augustApi = require("august-connect");
-    this.manufacturer = "AUGUST";
+    this.manufacturer = "August Locks Inc.";
     this.accessories = {};
 
     if (api) {
@@ -79,14 +77,14 @@ class AugustPlatform {
 
     self.login(function (error) {
       if (!error) {
-        self.storage.setItemSync('authed', true);
+        self.storage.setItemSync("authed", true);
         for (var deviceID in self.accessories) {
           var accessory = self.accessories[deviceID];
           // Update inital state
           self.updatelockStates(accessory);
         }
       } else {
-        self.storage.setItemSync('authed', false);
+        self.storage.setItemSync("authed", false);
       }
       callback(error);
     });
@@ -118,27 +116,23 @@ class AugustPlatform {
   setService(accessory) {
     var self = this;
     accessory
-      .getService(self.Service.LockMechanism)
-      .getCharacteristic(self.Characteristic.LockCurrentState)
+      .getService(self.Service.GarageDoorOpener)
+      .getCharacteristic(self.Characteristic.CurrentDoorState)
       .on("get", self.getState.bind(self, accessory));
 
     accessory
-      .getService(self.Service.LockMechanism)
-      .getCharacteristic(self.Characteristic.LockTargetState)
+      .getService(self.Service.GarageDoorOpener)
+      .getCharacteristic(self.Characteristic.TargetDoorState)
       .on("get", self.getTargetState.bind(self, accessory))
       .on("set", self.setState.bind(self, accessory));
 
-
-      var batteryService = accessory.getService(self.Service.BatteryService) 
-    if(batteryService) {
-        batteryService
-          .getCharacteristic(self.Characteristic.BatteryLevel);
-        batteryService
-          .getCharacteristic(self.Characteristic.StatusLowBattery);
-
-      } else {
-        accessory.addService(self.Service.BatteryService);
-      }
+    var batteryService = accessory.getService(self.Service.BatteryService);
+    if (batteryService) {
+      batteryService.getCharacteristic(self.Characteristic.BatteryLevel);
+      batteryService.getCharacteristic(self.Characteristic.StatusLowBattery);
+    } else {
+      accessory.addService(self.Service.BatteryService);
+    }
 
     var service = accessory.getService(self.Service.ContactSensor);
 
@@ -232,22 +226,20 @@ class AugustPlatform {
   updatelockStates(accessory) {
     var self = this;
 
-    var lockService = accessory.getService(self.Service.LockMechanism);
+    var lockService = accessory.getService(self.Service.GarageDoorOpener);
     var doorService = accessory.getService(self.Service.ContactSensor);
 
-    lockService.getCharacteristic(self.Characteristic.LockTargetState).updateValue(accessory.context.targetState);
-    lockService.getCharacteristic(self.Characteristic.LockCurrentState).updateValue(accessory.context.currentState);
+    lockService.getCharacteristic(self.Characteristic.TargetDoorState).updateValue(accessory.context.targetState);
+    lockService.getCharacteristic(self.Characteristic.CurrentDoorState).updateValue(accessory.context.currentState);
     doorService.getCharacteristic(self.Characteristic.ContactSensorState).updateValue(accessory.context.doorState);
-  
+
     var batteryService = accessory.getService(self.Service.BatteryService);
 
-    if(batteryService) {
-      batteryService
-        .setCharacteristic(self.Characteristic.BatteryLevel, accessory.context.batt);
-        
-      batteryService
-        .setCharacteristic(self.Characteristic.StatusLowBattery, accessory.context.low);
-    }  
+    if (batteryService) {
+      batteryService.setCharacteristic(self.Characteristic.BatteryLevel, accessory.context.batt);
+
+      batteryService.setCharacteristic(self.Characteristic.StatusLowBattery, accessory.context.low);
+    }
   }
 
   // Method to retrieve lock state from the server
@@ -337,7 +329,7 @@ class AugustPlatform {
             self.lock = json[self.lockids[i]];
             self.lockname = self.lock["LockName"];
 
-            if(!self.lock || !self.lockname) {
+            if (!self.lock || !self.lockname) {
               continue;
             }
 
@@ -380,7 +372,7 @@ class AugustPlatform {
 
     Promise.all([getLock, getDetails]).then(
       function (values) {
-        var lock = values[0]
+        var lock = values[0];
         var locks = lock.info;
 
         self.batt = values[1].battery * 100;
@@ -427,8 +419,8 @@ class AugustPlatform {
 
           // Store and initialize variables into context
           newAccessory.context.deviceID = thisDeviceID;
-          newAccessory.context.initialState = self.Characteristic.LockCurrentState.SECURED;
-          newAccessory.context.currentState = self.Characteristic.LockCurrentState.SECURED;
+          newAccessory.context.initialState = self.Characteristic.CurrentDoorState.SECURED;
+          newAccessory.context.currentState = self.Characteristic.CurrentDoorState.SECURED;
           newAccessory.context.serialNumber = thisSerialNumber;
           newAccessory.context.home = thishome;
           newAccessory.context.model = thisModel;
@@ -437,11 +429,10 @@ class AugustPlatform {
             self.log("[" + newAccessory.displayName + "]", msg);
           };
 
-
           newAccessory.context.batt = self.batt;
           newAccessory.context.low = self.low;
           // Setup HomeKit security systemLoc service
-          newAccessory.addService(self.Service.LockMechanism, thislockName);
+          newAccessory.addService(self.Service.GarageDoorOpener, thislockName);
           newAccessory.addService(self.Service.ContactSensor, thislockName);
           newAccessory.addService(self.Service.BatteryService, thislockName);
           // Setup HomeKit accessory information
@@ -466,19 +457,21 @@ class AugustPlatform {
           newAccessory.updateReachability(true);
         }
 
-
-    if (self.batt) {
-      newAccessory.context.low = (self.batt > 20 || self.batt <= 0) ? self.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL : self.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
-    }
+        if (self.batt) {
+          newAccessory.context.low =
+            self.batt > 20 || self.batt <= 0
+              ? self.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL
+              : self.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
+        }
 
         if (state) {
           var newState;
           if (state === "locked") {
-            newAccessory.context.initialState = self.Characteristic.LockCurrentState.UNSECURED;
-            newState = self.Characteristic.LockCurrentState.SECURED;
+            newAccessory.context.initialState = self.Characteristic.CurrentDoorState.UNSECURED;
+            newState = self.Characteristic.CurrentDoorState.SECURED;
           } else if (state === "unlocked") {
-            newAccessory.context.initialState = self.Characteristic.LockCurrentState.SECURED;
-            newState = self.Characteristic.LockCurrentState.UNSECURED;
+            newAccessory.context.initialState = self.Characteristic.CurrentDoorState.SECURED;
+            newState = self.Characteristic.CurrentDoorState.UNSECURED;
           }
 
           // Detect for state changes
@@ -517,7 +510,7 @@ class AugustPlatform {
     accessory.context.targetState = state;
     var status = self.lockState[state];
     var remoteOperate =
-      state == self.Characteristic.LockTargetState.SECURED
+      state == self.Characteristic.TargetDoorState.SECURED
         ? self.augustApi.lock({
           lockID: lockCtx.deviceID,
           config: self.augustApiConfig,
@@ -553,4 +546,4 @@ class AugustPlatform {
   }
 }
 
-exports.AugustPlatform = AugustPlatform;
+exports.AugustDummyGaragePlatform = AugustDummyGaragePlatform;
