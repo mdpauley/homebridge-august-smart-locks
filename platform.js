@@ -419,8 +419,8 @@ class AugustDummyGaragePlatform {
 
           // Store and initialize variables into context
           newAccessory.context.deviceID = thisDeviceID;
-          newAccessory.context.initialState = self.Characteristic.CurrentDoorState.SECURED;
-          newAccessory.context.currentState = self.Characteristic.CurrentDoorState.SECURED;
+          newAccessory.context.initialState = self.Characteristic.CurrentDoorState.CLOSED;
+          newAccessory.context.currentState = self.Characteristic.CurrentDoorState.CLOSED;
           newAccessory.context.serialNumber = thisSerialNumber;
           newAccessory.context.home = thishome;
           newAccessory.context.model = thisModel;
@@ -467,11 +467,11 @@ class AugustDummyGaragePlatform {
         if (state) {
           var newState;
           if (state === "locked") {
-            newAccessory.context.initialState = self.Characteristic.CurrentDoorState.UNSECURED;
-            newState = self.Characteristic.CurrentDoorState.SECURED;
+            newAccessory.context.initialState = self.Characteristic.CurrentDoorState.OPEN;
+            newState = self.Characteristic.CurrentDoorState.CLOSED;
           } else if (state === "unlocked") {
-            newAccessory.context.initialState = self.Characteristic.CurrentDoorState.SECURED;
-            newState = self.Characteristic.CurrentDoorState.UNSECURED;
+            newAccessory.context.initialState = self.Characteristic.CurrentDoorState.CLOSED;
+            newState = self.Characteristic.CurrentDoorState.OPEN;
           }
 
           // Detect for state changes
@@ -510,7 +510,7 @@ class AugustDummyGaragePlatform {
     accessory.context.targetState = state;
     var status = self.lockState[state];
     var remoteOperate =
-      state == self.Characteristic.TargetDoorState.SECURED
+      state == self.Characteristic.TargetDoorState.CLOSED
         ? self.augustApi.lock({
           lockID: lockCtx.deviceID,
           config: self.augustApiConfig,
@@ -532,7 +532,7 @@ class AugustDummyGaragePlatform {
         self.count = 0;
         self.periodicUpdate();
         accessory.context.currentState = state;
-        callback(null, state);
+        callback(null);
         setImmediate(() => {
           self.updatelockStates(accessory);
         });
