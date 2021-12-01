@@ -539,7 +539,7 @@ class AugustPlatform {
         self.count = 0;
         self.periodicUpdate();
         accessory.context.currentState = state;
-        callback(null, state);
+        callback(null);
         setImmediate(() => {
           self.updatelockStates(accessory);
         });
