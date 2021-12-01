@@ -25,7 +25,7 @@
     "test": "echo \"Error: no test specified\" && exit"
   },
   "dependencies": {
-    "august-connect": "github:techyowl/august-connect",
+    "august-connect": "august-connect-api",
     "node-persist": "^2.1.0",
     "tough-cookie": "^2.3.1"
   },
