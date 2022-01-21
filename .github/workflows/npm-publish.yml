@@ -1,0 +1,71 @@
+name: Node CI
+
+# Push tests pushes; PR tests merges
+on: [push, pull_request]
+
+jobs:
+
+  # Test the build
+  build:
+    # Setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [ 10.x, 12.x, 14.x ]
+
+  # Go
+    steps:
+    - name: Check out repo
+      uses: actions/checkout@v1
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Env
+      run: |
+        echo "Event name: ${{ github.event_name }}"
+        echo "Git ref:    ${{ github.ref }}"
+        echo "GH actor:   ${{ github.actor }}"
+        echo "SHA:        ${{ github.sha }}"
+        VER=`node --version`; echo "Node ver:   $VER"
+        VER=`npm --version`; echo "npm ver:    $VER"
+    - name: Install
+      run: npm install
+
+  # ----- Only git tag testing + package publishing beyond this point ----- #
+
+  # Publish to package registries
+  publish:
+    # Setup
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    # Go
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install
+        run: npm i
+
+      # Publish to npm
+      - name: Publish @RC to npm
+        if: contains(github.ref, 'RC')
+        run: npm publish --tag RC
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
+
+      - name: Publish @latest to npm
+        if: contains(github.ref, 'RC') == false #'!contains()'' doesn't work lol
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}

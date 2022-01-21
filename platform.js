@@ -48,8 +48,8 @@ class AugustDummyGaragePlatform {
       augustID: config.email ? config.email : config.phone,
     };
 
-    this.augustApi = require("august-connect");
-    this.manufacturer = "August Locks Inc.";
+    this.augustApi = require("august-connect-api");
+    this.manufacturer = "AUGUST";
     this.accessories = {};
 
     if (api) {
